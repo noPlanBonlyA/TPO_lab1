@@ -13,6 +13,7 @@ class CosTaylorTest {
     private val precision = 1e-6
 
     @Nested
+    @DisplayName("Basic functionality tests")
     inner class BasicCases {
 
         @Test
@@ -34,6 +35,7 @@ class CosTaylorTest {
     }
 
     @Nested
+    @DisplayName("Edge case tests")
     inner class EdgeCases {
 
         @Test
@@ -56,6 +58,7 @@ class CosTaylorTest {
     }
 
     @Nested
+    @DisplayName("Precision tests")
     inner class PrecisionTests {
 
         @Test
@@ -74,6 +77,7 @@ class CosTaylorTest {
     }
 
     @Nested
+    @DisplayName("Convergence tests")
     inner class ConvergenceTests {
 
         @Test
