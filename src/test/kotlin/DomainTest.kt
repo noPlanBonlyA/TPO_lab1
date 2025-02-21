@@ -2,116 +2,179 @@ package lab1
 
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DomainModelTest {
+class DomainModelNewTest {
 
     @Nested
-    @DisplayName("Character Tests")
-    inner class CharacterTests {
+    @DisplayName("Entity Tests")
+    inner class EntityTests {
+
         @Test
-        @DisplayName("Character creation works correctly")
-        fun `test character creation`() {
-            val zafod = Character("Зафод", "расчищает проход")
-            assertNotNull(zafod)
-            assertEquals("Зафод", zafod.name)
-            assertEquals("расчищает проход", zafod.action)
+        @DisplayName("Person creation works correctly")
+        fun `test person creation`() {
+            val person = Person("Алиса", "ничего не делает")
+            assertNotNull(person)
+            assertEquals("Алиса", person.name)
+            assertEquals("ничего не делает", person.state)
+        }
+
+        @Test
+        @DisplayName("Place creation works correctly")
+        fun `test place creation`() {
+            val place = Place("Лес", "Густой и таинственный")
+            assertNotNull(place)
+            assertEquals("Лес", place.name)
+            assertEquals("Густой и таинственный", place.description)
+            assertEquals("", place.state)
+        }
+
+        @Test
+        @DisplayName("Thing creation works correctly")
+        fun `test thing creation`() {
+            val thing = Thing("Меч", "острый")
+            assertNotNull(thing)
+            assertEquals("Меч", thing.name)
+            assertEquals("острый", thing.state)
         }
     }
 
     @Nested
-    @DisplayName("Location Tests")
-    inner class LocationTests {
-        @Test
-        @DisplayName("Location creation works correctly")
-        fun `test location creation`() {
-            val cave = Location("Пещера", "Сеть галерей и переходов, заваленных обломками и потрохами")
-            assertNotNull(cave)
-            assertEquals("Пещера", cave.name)
-            assertEquals("Сеть галерей и переходов, заваленных обломками и потрохами", cave.description)
-        }
-    }
+    @DisplayName("Action Tests")
+    inner class ActionTests {
 
-    @Nested
-    @DisplayName("Object Tests")
-    inner class ObjectTests {
         @Test
-        @DisplayName("Object creation works correctly")
-        fun `test object creation`() {
-            val whale = Object("Кит", "упал, образовав провал")
-            assertNotNull(whale)
-            assertEquals("Кит", whale.name)
-            assertEquals("упал, образовав провал", whale.state)
-        }
-    }
+        @DisplayName("MoveAction updates Person state correctly")
+        fun `test move action`() {
+            val person = Person("Боб", "ожидает")
+            val place = Place("Город", "оживлённый")
+            val moveAction = MoveAction(person, place)
+            val result = moveAction.execute()
 
-    @Nested
-    @DisplayName("Environment Tests")
-    inner class EnvironmentTests {
-        @Test
-        @DisplayName("Environment creation works correctly")
-        fun `test environment creation`() {
-            val depths = Environment("Сырой воздух из темных глубин, пыльный мрак")
-            assertNotNull(depths)
-            assertEquals("Сырой воздух из темных глубин, пыльный мрак", depths.description)
-        }
-    }
-
-    @Nested
-    @DisplayName("Character Actions")
-    inner class CharacterActions {
-        @Test
-        @DisplayName("Character moves to location correctly")
-        fun `test character move to location`() {
-            val zafod = Character("Зафод", "ждёт команды")
-            val cave = Location("Пещера", "Заваленная проходами")
-            zafod.moveTo(cave)
-            assertEquals("Зафод перемещается в Пещера", zafod.action)
+            assertEquals("Боб перемещается в Город", result)
+            assertEquals("перемещается в Город", person.state)
         }
 
         @Test
-        @DisplayName("Character interacts with object correctly")
-        fun `test character interact with object`() {
-            val marvin = Character("Марвин", "ждёт команды")
-            val debris = Object("Обломки", "завалены")
-            marvin.interactWith(debris)
-            assertEquals("Марвин взаимодействует с Обломки", marvin.action)
-            assertEquals("использован персонажем Марвин", debris.state)
-        }
-    }
+        @DisplayName("InteractAction updates states correctly")
+        fun `test interact action`() {
+            val person = Person("Чарли", "ожидает")
+            val thing = Thing("Книга", "неиспользована")
+            val interactAction = InteractAction(person, thing)
+            val result = interactAction.execute()
 
-    @Nested
-    @DisplayName("Object Behavior")
-    inner class ObjectBehavior {
+            assertEquals("Чарли взаимодействует с Книга", result)
+            assertEquals("взаимодействует с Книга", person.state)
+            assertEquals("использован персонажем Чарли", thing.state)
+        }
+
         @Test
-        @DisplayName("Object state changes correctly")
-        fun `test object state change`() {
-            val flashlight = Object("Фонарь", "выключен")
-            flashlight.changeState("включен")
+        @DisplayName("IlluminateAction updates Person, Thing and Environment states correctly")
+        fun `test illuminate action`() {
+            val person = Person("Диана", "в темноте")
+            val flashlight = Thing("Фонарь", "выключен")
+            val environment = Place("Пещера", "темная")
+            val illuminateAction = IlluminateAction(person, flashlight, environment)
+            val result = illuminateAction.execute()
+
+            assertEquals("Диана освещает Фонарь и изменяет обстановку в Пещера", result)
+            assertEquals("освещает Фонарь", person.state)
             assertEquals("включен", flashlight.state)
+            assertEquals("Освещенная Пещера, мрак рассеян", environment.state)
         }
     }
 
     @Nested
-    @DisplayName("Environment Behavior")
-    inner class EnvironmentBehavior {
+    @DisplayName("Story DSL Tests")
+    inner class StoryDslTests {
+
         @Test
-        @DisplayName("Environment updates correctly")
-        fun `test environment update`() {
-            val environment = Environment("Темно и сыро")
-            environment.update("Освещенная пещера, мрак рассеян")
-            assertEquals("Освещенная пещера, мрак рассеян", environment.description)
+        @DisplayName("DSL adds actions and prints narrative correctly")
+        fun `test story DSL output`() {
+            val person = Person("Ева", "стоит")
+            val place = Place("Замок", "старый и заброшенный")
+            val thing = Thing("Ключ", "неиспользован")
+
+            val outputStream = ByteArrayOutputStream()
+            val printStream = PrintStream(outputStream)
+            val originalOut = System.out
+            System.setOut(printStream)
+            try {
+                story {
+                    addAction(MoveAction(person, place))
+                    addAction(InteractAction(person, thing))
+                }
+            } finally {
+                System.setOut(originalOut)
+            }
+
+            val output = outputStream.toString().trim().lines()
+            assertTrue(output.any { it.contains("Ева перемещается в Замок") })
+            assertTrue(output.any { it.contains("Ева взаимодействует с Ключ") })
+            assertEquals("взаимодействует с Ключ", person.state)
+            assertEquals("использован персонажем Ева", thing.state)
+        }
+
+        @Test
+        @DisplayName("Story narrate method produces full narrative")
+        fun `test story narrate`() {
+            val person = Person("Фрэнк", "начальное состояние")
+            val place = Place("Город", "оживлённый")
+            val outputStream = ByteArrayOutputStream()
+            val printStream = PrintStream(outputStream)
+            val originalOut = System.out
+            System.setOut(printStream)
+            try {
+                val storyInstance = Story()
+                storyInstance.addAction(MoveAction(person, place))
+                storyInstance.narrate()
+            } finally {
+                System.setOut(originalOut)
+            }
+            val output = outputStream.toString()
+            assertTrue(output.contains("Нарратив истории:"))
+            assertTrue(output.contains("Фрэнк перемещается в Город"))
         }
     }
 
     @Nested
-    @DisplayName("Full Scenario Test")
-    inner class FullScenario {
+    @DisplayName("Full Domain Scenario Test")
+    inner class FullScenarioTest {
+
         @Test
-        @DisplayName("Full scenario runs without errors")
-        fun `test full scenario`() {
-            createDomainModel()
-            assertTrue(true)
+        @DisplayName("Full scenario runs without errors and updates all states correctly")
+        fun `test full domain scenario`() {
+            // Создаем основные сущности
+            val zafod = Person("Зафод", "осматривается")
+            val marvin = Person("Марвин", "ждёт команды")
+            val cave = Place("Пещера", "Сеть галерей и переходов, заваленных обломками и потрохами")
+            val whale = Thing("Кит", "упал, образовав провал")
+            val debris = Thing("Обломки", "завалены")
+            val flashlight = Thing("Фонарь", "выключен")
+
+            // Перенаправляем вывод, чтобы DSL блок не засорял консоль
+            val outputStream = ByteArrayOutputStream()
+            val printStream = PrintStream(outputStream)
+            val originalOut = System.out
+            System.setOut(printStream)
+            try {
+                story {
+                    addAction(MoveAction(zafod, cave))
+                    addAction(InteractAction(marvin, debris))
+                    addAction(InteractAction(zafod, flashlight))
+                    addAction(IlluminateAction(zafod, flashlight, cave))
+                }
+            } finally {
+                System.setOut(originalOut)
+            }
+
+            assertEquals("освещает Фонарь", zafod.state)
+            assertEquals("взаимодействует с Обломки", marvin.state)
+            assertEquals("использован персонажем Марвин", debris.state)
+            assertEquals("включен", flashlight.state)
+            assertEquals("Освещенная Пещера, мрак рассеян", cave.state)
         }
     }
 }

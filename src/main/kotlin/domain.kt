@@ -1,74 +1,114 @@
 package lab1
 
-data class Character(val name: String, var action: String) {
-    fun moveTo(location: Location) {
-        action = "$name перемещается в ${location.name}"
-    }
+interface Entity {
+    val name: String
+    var state: String
+}
 
-    fun interactWith(obj: Object) {
-        action = "$name взаимодействует с ${obj.name}"
-        obj.changeState("использован персонажем $name")
+data class Person(override val name: String, override var state: String = "") : Entity
+data class Place(
+    override val name: String,
+    var description: String,
+    override var state: String = ""
+) : Entity
+data class Thing(override val name: String, override var state: String) : Entity
+
+sealed class Action {
+    abstract val actor: Entity
+    abstract val verb: String
+    abstract fun execute(): String
+}
+
+data class MoveAction(
+    override val actor: Entity,
+    val destination: Place
+) : Action() {
+    override val verb: String = "перемещается"
+    override fun execute(): String {
+        actor.state = "$verb в ${destination.name}"
+        return "${actor.name} $verb в ${destination.name}"
     }
 }
 
-data class Location(val name: String, var description: String, val objects: MutableList<Object> = mutableListOf()) {
-    fun addObject(obj: Object) {
-        objects.add(obj)
-    }
-
-    fun removeObject(obj: Object) {
-        objects.remove(obj)
-    }
-}
-
-data class Object(val name: String, var state: String) {
-    fun changeState(newState: String) {
-        state = newState
+data class InteractAction(
+    override val actor: Entity,
+    val target: Entity
+) : Action() {
+    override val verb: String = "взаимодействует"
+    override fun execute(): String {
+        actor.state = "$verb с ${target.name}"
+        target.state = "использован персонажем ${actor.name}"
+        return "${actor.name} $verb с ${target.name}"
     }
 }
 
-data class Environment(var description: String) {
-    fun update(newDescription: String) {
-        description = newDescription
+data class IlluminateAction(
+    override val actor: Entity,
+    val target: Thing,
+    val environment: Place
+) : Action() {
+    override val verb: String = "освещает"
+    override fun execute(): String {
+        actor.state = "$verb ${target.name}"
+        target.state = "включен"
+        environment.state = "Освещенная ${environment.name}, мрак рассеян"
+        return "${actor.name} $verb ${target.name} и изменяет обстановку в ${environment.name}"
     }
 }
 
-fun createDomainModel() {
-    val zafod = Character("Зафод", "осматривается")
-    val marvin = Character("Марвин", "ждёт команды")
+class Story {
+    private val actions = mutableListOf<Action>()
 
-    val cave = Location("Пещера", "Сеть галерей и переходов, заваленных обломками и потрохами")
-    val depths = Environment("Сырой воздух из темных глубин, пыльный мрак")
+    fun addAction(action: Action) {
+        actions.add(action)
+        println(action.execute())
+    }
 
-    val whale = Object("Кит", "упал, образовав провал")
-    val debris = Object("Обломки", "завалены")
-    val flashlight = Object("Фонарь", "выключен")
+    fun narrate() {
+        println("\nНарратив истории:")
+        actions.forEach { println("- ${it.execute()}") }
+    }
+}
 
-    cave.addObject(whale)
-    cave.addObject(debris)
-    cave.addObject(flashlight)
+fun story(block: Story.() -> Unit) {
+    val story = Story()
+    story.block()
 
-    println("Персонажи: $zafod, $marvin")
-    println("Локация: $cave")
-    println("Окружение: $depths")
-    println("Объекты: $whale, $debris, $flashlight")
-
-
-    zafod.moveTo(cave)
-    println(zafod.action)
-
-    marvin.interactWith(debris)
-    cave.removeObject(debris)
-    println(marvin.action)
-    println("Объекты: ${cave.objects}")
-
-    zafod.interactWith(flashlight)
-    flashlight.changeState("включен")
-    depths.update("Освещенная пещера, мрак рассеян")
-    println(zafod.action)
-    println(depths.description)
+     story.narrate()
 }
 
 fun main() {
-    createDomainModel()
+
+    val zafod = Person("Зафод", "осматривается")
+    val marvin = Person("Марвин", "ждёт команды")
+
+
+    val cave = Place("Пещера", "Сеть галерей и переходов, заваленных обломками и потрохами")
+
+
+    val whale = Thing("Кит", "упал, образовав провал")
+    val debris = Thing("Обломки", "завалены")
+    val flashlight = Thing("Фонарь", "выключен")
+
+
+    story {
+        println(
+            "Земля провалилась там, где упал ${whale.name}, " +
+                    "обнаружив целую сеть галерей и переходов, " +
+                    "которые теперь были сильно завалены ${debris.name} и потрохами."
+        )
+        println(
+            "${zafod.name} начал расчищать один из проходов, но у ${marvin.name} это вышло гораздо быстрее."
+        )
+        println(
+            "Сырой воздух поднимался из темных глубин, и когда ${zafod.name} посветил ${flashlight.name} внутрь, " +
+                    "мало что было видно в пыльном мраке.\n"
+        )
+
+
+        addAction(MoveAction(zafod, cave))
+        addAction(InteractAction(marvin, debris))
+        addAction(InteractAction(zafod, flashlight))
+        addAction(IlluminateAction(zafod, flashlight, cave))
+    }
 }
